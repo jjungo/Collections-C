@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     return cc_get_status();
 }
 
-int cmp(void *k1, void *k2)
+int cmp(const void *k1, const void *k2)
 {
     int a = *((int*) k1);
     int b = *((int*) k2);
@@ -33,7 +33,8 @@ int cmp(void *k1, void *k2)
 
 void test_treeset_add()
 {
-    TreeSet *set = treeset_new(cmp);
+    TreeSet *set;
+    treeset_new(cmp, &set);
 
     int a = 1;
     int b = 2;
@@ -60,7 +61,8 @@ void test_treeset_add()
 
 void test_treeset_remove()
 {
-    TreeSet *set = treeset_new(cmp);
+    TreeSet *set;
+    treeset_new(cmp, &set);
 
     int a = 1;
     int b = 2;
@@ -70,7 +72,7 @@ void test_treeset_remove()
     treeset_add(set, &b);
     treeset_add(set, &c);
 
-    treeset_remove(set, &a);
+    treeset_remove(set, &a, NULL);
 
     size_t size = treeset_size(set);
 
@@ -87,7 +89,8 @@ void test_treeset_remove()
 
 void test_treeset_remove_all()
 {
-    TreeSet *set = treeset_new(cmp);
+    TreeSet *set;
+    treeset_new(cmp, &set);
 
     int a = 1;
     int b = 2;
@@ -115,7 +118,8 @@ void test_treeset_remove_all()
 
 void test_treeset_size()
 {
-    TreeSet *set = treeset_new(cmp);
+    TreeSet *set;
+    treeset_new(cmp, &set);
 
     int a = 1;
     int b = 2;
@@ -133,7 +137,8 @@ void test_treeset_size()
 
 void test_treeset_iter_next()
 {
-    TreeSet *t = treeset_new(cmp);
+    TreeSet *t;
+    treeset_new(cmp, &t);
 
     int a = 1;
     int b = 2;
@@ -154,9 +159,7 @@ void test_treeset_iter_next()
     treeset_iter_init(&iter, t);
 
     void *e;
-    while (treeset_iter_has_next(&iter)) {
-        treeset_iter_next(&iter, &e);
-
+    while (treeset_iter_next(&iter, &e) != CC_ITER_END) {
         if (*((int*)e) == a)
             one++;
 
@@ -182,7 +185,8 @@ void test_treeset_iter_next()
 
 void test_treeset_iter_remove()
 {
-    TreeSet *t = treeset_new(cmp);
+    TreeSet *t;
+    treeset_new(cmp, &t);
 
     int a = 1;
     int b = 2;
@@ -196,11 +200,9 @@ void test_treeset_iter_remove()
     treeset_iter_init(&iter, t);
 
     void *e;
-    while (treeset_iter_has_next(&iter)) {
-        treeset_iter_next(&iter, &e);
-
+    while (treeset_iter_next(&iter, &e) != CC_ITER_END) {
         if (*((int*)e) == b)
-            treeset_iter_remove(&iter);
+            treeset_iter_remove(&iter, NULL);
     }
 
     cc_assert(treeset_size(t) == 2,

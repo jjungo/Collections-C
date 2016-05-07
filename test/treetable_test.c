@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     return cc_get_status();
 }
 
-int cmp(void *k1, void *k2)
+int cmp(const void *k1, const void *k2)
 {
     int a = *((int*) k1);
     int b = *((int*) k2);
@@ -62,7 +62,8 @@ int cmp(void *k1, void *k2)
 
 void test_treetable_add()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -93,7 +94,8 @@ void test_treetable_add()
 
 void test_treetable_remove()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -113,7 +115,7 @@ void test_treetable_remove()
     treetable_add(table, &g, "g");
     treetable_add(table, &h, "h");
 
-    treetable_remove(table, &f);
+    treetable_remove(table, &f, NULL);
 
     cc_assert(!treetable_contains_key(table, &f),
               cc_msg("treetable_remove: Removed key still present"));
@@ -124,7 +126,8 @@ void test_treetable_remove()
 
 void test_treetable_remove_all()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -158,7 +161,8 @@ void test_treetable_remove_all()
 
 void test_treetable_get()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -168,9 +172,12 @@ void test_treetable_get()
     treetable_add(table, &b, "b");
     treetable_add(table, &c, "c");
 
-    char *ra = treetable_get(table, &a);
-    char *rb = treetable_get(table, &b);
-    char *rc = treetable_get(table, &c);
+    char *ra;
+    char *rb;
+    char *rc;
+    treetable_get(table, &a, (void*) &ra);
+    treetable_get(table, &b, (void*) &rb);
+    treetable_get(table, &c, (void*) &rc);
 
     cc_assert(strcmp(ra, "a") == 0,
               cc_msg("treetable_get: Retrieved value not as expected"));
@@ -186,7 +193,8 @@ void test_treetable_get()
 
 void test_treetable_size()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -204,7 +212,8 @@ void test_treetable_size()
 
 void test_treetable_get_first()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -216,18 +225,20 @@ void test_treetable_get_first()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    int first = *((int*) treetable_get_first_key(table));
+    int *first;
+    treetable_get_first_key(table, (void*) &first);
 
-    cc_assert(first == a,
+    cc_assert(*first == a,
               cc_msg("treetable_get_first_key: first %d, expected %d instead",
-                     first, a));
+                     *first, a));
 
     treetable_destroy(table);
 }
 
 void test_treetable_get_last()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -239,18 +250,20 @@ void test_treetable_get_last()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    int last = *((char*) treetable_get_last_key(table));
+    int *last;
+    treetable_get_last_key(table, (void*) &last);
 
-    cc_assert(last == d,
+    cc_assert(*last == d,
               cc_msg("treetable_get_last_key: last %d, expected %d instead",
-                     last, d));
+                     *last, d));
 
     treetable_destroy(table);
 }
 
 void test_treetable_remove_first()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -262,7 +275,7 @@ void test_treetable_remove_first()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    treetable_remove_first(table);
+    treetable_remove_first(table, NULL);
 
     cc_assert(!treetable_contains_key(table, &a),
               cc_msg("treetable_remove_first: Key still present after removal"));
@@ -272,7 +285,8 @@ void test_treetable_remove_first()
 
 void test_treetable_remove_last()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -284,7 +298,7 @@ void test_treetable_remove_last()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    treetable_remove_last(table);
+    treetable_remove_last(table, NULL);
 
     cc_assert(!treetable_contains_key(table, &d),
               cc_msg("treetable_remove_last: Key still present after removal"));
@@ -294,7 +308,8 @@ void test_treetable_remove_last()
 
 void test_treetable_get_greater_than()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -306,18 +321,20 @@ void test_treetable_get_greater_than()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    int g = *((int*) treetable_get_greater_than(table, &b));
+    int *g;
+    treetable_get_greater_than(table, &b, (void*) &g);
 
-    cc_assert(g == c,
+    cc_assert(*g == c,
               cc_msg("treetable_get_greater_than: Expected key was %d, but got "
-                     "%d instead", c, g));
+                     "%d instead", c, *g));
 
     treetable_destroy(table);
 }
 
 void test_treetable_get_lesser_than()
 {
-    TreeTable *table = treetable_new(cmp);
+    TreeTable *table;
+    treetable_new(cmp, &table);
 
     int a = 1;
     int b = 2;
@@ -329,11 +346,12 @@ void test_treetable_get_lesser_than()
     treetable_add(table, &b, "c");
     treetable_add(table, &a, "d");
 
-    int g = *((int*) treetable_get_lesser_than(table, &b));
+    int *g;
+    treetable_get_lesser_than(table, &b, (void*) &g);
 
-    cc_assert(g == a,
+    cc_assert(*g == a,
               cc_msg("treetable_get_lesser_than: Expected key was %d, but got "
-                     "%d instead", a, g));
+                     "%d instead", a, *g));
 
     treetable_destroy(table);
 }
@@ -341,7 +359,8 @@ void test_treetable_get_lesser_than()
 
 void test_treetable_iter_next()
 {
-    TreeTable *t = treetable_new(cmp);
+    TreeTable *t;
+    treetable_new(cmp, &t);
 
     int a = 1;
     int b = 2;
@@ -362,9 +381,7 @@ void test_treetable_iter_next()
     treetable_iter_init(&iter, t);
 
     TreeTableEntry entry;
-    while (treetable_iter_has_next(&iter)) {
-        treetable_iter_next(&iter, &entry);
-
+    while (treetable_iter_next(&iter, &entry) != CC_ITER_END) {
         int const *key = entry.key;
 
         if (*key == a)
@@ -392,7 +409,8 @@ void test_treetable_iter_next()
 
 void test_treetable_iter_remove()
 {
-    TreeTable *t = treetable_new(cmp);
+    TreeTable *t;
+    treetable_new(cmp, &t);
 
     int a = 1;
     int b = 2;
@@ -406,12 +424,23 @@ void test_treetable_iter_remove()
     treetable_iter_init(&iter, t);
 
     TreeTableEntry entry;
-    while (treetable_iter_has_next(&iter)) {
-        treetable_iter_next(&iter, &entry);
+    while (treetable_iter_next(&iter, &entry) != CC_ITER_END) {
         int const *key = entry.key;
 
-        if (*key == b)
-            treetable_iter_remove(&iter);
+        if (*key == b) {
+            enum cc_stat s;
+            s = treetable_iter_remove(&iter, NULL);
+
+            cc_assert(s == CC_OK,
+                      cc_msg("treetable_iter_remove: Expected remove success, but"
+                             " got failure instead"));
+
+            s = treetable_iter_remove(&iter, NULL);
+
+            cc_assert(s == CC_ERR_KEY_NOT_FOUND,
+                      cc_msg("treetable_iter_remove: Expected remove failure, but"
+                             " got something else instead"));
+        }
     }
 
     cc_assert(treetable_size(t) == 2,
@@ -472,8 +501,10 @@ void test_rb_structure()
     char *dummy = "dummy";
 
     /* Easy tracking of how many keys are available after removal */
-    Deque     *keys = deque_new();
-    TreeTable *tree = treetable_new(cmp);
+    Deque *keys;
+    deque_new(&keys);
+    TreeTable *tree;
+    treetable_new(cmp, &tree);
 
     /* Populate the tree and assert RB validity on each insert */
     int i;
@@ -483,24 +514,27 @@ void test_rb_structure()
         treetable_add(tree, &(rkeys[i]), dummy);
 
         int status = treetable_assert_rb_rules(tree);
+        char *msg = error_code_to_string(status);
         cc_assert(status == RB_ERROR_OK,
-                  cc_msg("Red Black tree validation (insertion) (i=%d): %s", i,
-                         error_code_to_string(status)));
+                  cc_msg("Red Black tree validation (insertion) (i=%d): %s", i, msg));
+        free(msg);
     }
 
     /* Remove keys at random until all keys are removed and assert Red Black */
     /* validity on each remove. */
     for (i = 0; i < nkeys; i++) {
-        int *key = deque_get(keys, (rand() % (deque_size(keys)) -1));
+        int *key;
+        deque_get_at(keys, (rand() % (deque_size(keys)) -1), (void*)&key);
 
         if (key != NULL) {
-            treetable_remove(tree, key);
-            deque_remove(keys, key);
+            treetable_remove(tree, key, NULL);
+            deque_remove(keys, key, NULL);
         }
         int status = treetable_assert_rb_rules(tree);
+        char *msg = error_code_to_string(status);
         cc_assert(status  == RB_ERROR_OK,
-                  cc_msg("Red Black tree validation (removal) (i=%d): %s", i,
-                         error_code_to_string(status)));
+                  cc_msg("Red Black tree validation (removal) (i=%d): %s", i, msg));
+        free(msg);
     }
 
     deque_destroy(keys);

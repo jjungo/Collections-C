@@ -40,47 +40,65 @@ void hashset_conf_init(HashSetConf *conf)
 }
 
 /**
- * Returns a new empty HashSet configured based on the specified properties
- * object.
+ * Creates a new HashSet and returns a status code.
  *
- * @return a new empty HashSet
+ * @note The newly created HashSet will be a set of strings.
+ *
+ * @return CC_OK if the creation was successful, or CC_ERR_ALLOC if the memory
+ * allocation for the new HashSet failed.
  */
-HashSet *hashset_new()
+enum cc_stat hashset_new(HashSet **hs)
 {
     HashSetConf hsc;
     hashset_conf_init(&hsc);
-    return hashset_new_conf(&hsc);
+    return hashset_new_conf(&hsc, hs);
 }
 
 /**
- * Returns a new empty HashSet based on the specified HashSetConf object.
+ * Creates a new empty HashSet based on the specified HashSetConf struct and
+ * returns a status code.
  *
  * The HashSet is allocated using the allocators specified in the HashSetConf
  * object. The allocation may fail if the underlying allocator fails.
  *
  * @param[in] conf The hashset configuration object. All fields must be initialized.
+ * @param[out] out Pointer to where the newly created HashSet is stored
  *
- * @return a new empty HashSet
+ * @return CC_OK if the creation was successful, or CC_ERR_ALLOC if the memory
+ * allocation for the new HashSet structure failed.
  */
-HashSet *hashset_new_conf(HashSetConf *conf)
+enum cc_stat hashset_new_conf(HashSetConf const * const conf, HashSet **hs)
 {
-    HashSet *set    = conf->mem_calloc(1, sizeof(HashSet));
+    HashSet *set = conf->mem_calloc(1, sizeof(HashSet));
 
-    set->table      = hashtable_new_conf(conf);
+    if (!set)
+        return CC_ERR_ALLOC;
+
+    HashTable *table;
+    enum cc_stat stat = hashtable_new_conf(conf, &table);
+
+    if (stat != CC_OK) {
+        conf->mem_free(set);
+        return stat;
+    }
+
+    set->table      = table;
     set->mem_alloc  = conf->mem_alloc;
     set->mem_calloc = conf->mem_calloc;
     set->mem_free   = conf->mem_free;
 
     /* A dummy pointer that is never actually dereferenced
     *  that must not be null.*/
-    set->dummy      = (int*) 1;
-    return set;
+    set->dummy = (int*) 1;
+    *hs = set;
+    return CC_OK;
 }
 
 /**
- * Destroys the specified HashSet.
+ * Destroys the specified HashSet structure without destroying the data
+ * it holds.
  *
- * @param[in] set the HashSet to be destroyed
+ * @param[in] table HashSet to be destroyed.
  */
 void hashset_destroy(HashSet *set)
 {
@@ -89,37 +107,38 @@ void hashset_destroy(HashSet *set)
 }
 
 /**
- * Adds a new element to the set.
+ * Adds a new element to the HashSet.
  *
  * @param[in] set the set to which the element is being added
  * @param[in] element the element being added
  *
- * @return true if the element was successfuly added to the set
+ * @return CC_OK if the element was successfully added, or CC_ERR_ALLOC
+ * if the memory allocation failed.
  */
-bool hashset_add(HashSet *set, void *element)
+enum cc_stat hashset_add(HashSet *set, void *element)
 {
     return hashtable_add(set->table, element, set->dummy);
 }
 
 /**
- * Removes and returns the specified element from the set if such an element
- * exists. This function returns NULL if the element was not a part of the
- * set.
+ * Removes the specified element from the HashSet and sets the out
+ * parameter to its value.
  *
  * @param[in] set the set from which the element is being removed
  * @param[in] element the element being removed
+ * @param[out] out Pointer to where the removed value is stored, or NULL
+ *                 if it is to be ignored
  *
- * @return the removed element, or NULL if the element was not found
+ * @return CC_OK if the element was successfully removed, or CC_ERR_VALUE_NOT_FOUND
+ * if the value was not found.
  */
-void *hashset_remove(HashSet *set, void *element)
+enum cc_stat hashset_remove(HashSet *set, void *element, void **out)
 {
-    /* Since the value is never null, a returned null can only
-     * mean that the element is not present */
-    return hashtable_remove(set->table, element) == NULL ? NULL : element;
+    return hashtable_remove(set->table, element, out);
 }
 
 /**
- * Removes all elemetns from the specified set.
+ * Removes all elements from the specified set.
  *
  * @param set the set from which all elements are being removed
  */
@@ -132,7 +151,7 @@ void hashset_remove_all(HashSet *set)
  * Checks whether an element is a part of the specified set.
  *
  * @param[in] set the set being searched for the specified element
- * @param[in] element the element being seached for
+ * @param[in] element the element being searched for
  *
  * @return true if the specified element is an element of the set
  */
@@ -166,21 +185,19 @@ size_t hashset_capacity(HashSet *set)
 }
 
 /**
- * A 'foreach loop' function that invokes the specified function on every element
- * of the set. The operation function should not modify the elements. Any
- * modification of the elements will invalidate the set.
+ * Applies the function fn to each element of the HashSet.
  *
  * @param[in] set the set on which this operation is being performed
- * @param[in] op the operation fuctnion that is invoked on each element of the
+ * @param[in] fn the operation function that is invoked on each element of the
  *               set
  */
-void hashset_foreach(HashSet *set, void (*op) (const void *e))
+void hashset_foreach(HashSet *set, void (*fn) (const void *e))
 {
-    hashtable_foreach_key(set->table, op);
+    hashtable_foreach_key(set->table, fn);
 }
 
 /**
- * Initializes the set iterator
+ * Initializes the set iterator.
  *
  * @param[in] iter the iterator that is being initialized
  * @param[in] set the set on which this iterator will operate
@@ -191,41 +208,45 @@ void hashset_iter_init(HashSetIter *iter, HashSet *set)
 }
 
 /**
- * Checks whether or not there are more set elements to iterate over.
- *
- * @param[in] iter iterator on which this operation is being performed
- *
- * @return true if the iterator has not reached the end of the set
- */
-bool hashset_iter_has_next(HashSetIter *iter)
-{
-    return hashtable_iter_has_next(&(iter->iter));
-}
-
-/**
- * Returns the next element in the sequence and advances the iterator.
+ * Advances the iterator and sets the out parameter to the value of the
+ * next element.
  *
  * @param[in] iter the iterator that is being advanced
+ * @param[out] out Pointer to where the next element is set
  *
- * @return the next element in the sequence
+ * @return CC_OK if the iterator was advanced, or CC_ITER_END if the
+ * end of the HashSet has been reached.
  */
-const void *hashset_iter_next(HashSetIter *iter)
+enum cc_stat hashset_iter_next(HashSetIter *iter, void **out)
 {
-    TableEntry *entry = hashtable_iter_next(&(iter->iter));
-    return entry->key;
+    TableEntry *entry;
+    enum cc_stat status = hashtable_iter_next(&(iter->iter), &entry);
+
+    if (status != CC_OK)
+        return status;
+
+    if (out)
+        *out = entry->key;
+
+    return CC_OK;
 }
 
 /**
- * Removes the last element returned by <code>hashset_iter_next()</code> and
- * returns that element.
+ * Removes the last returned entry by <code>hashset_iter_next()</code>
+ * function without invalidating the iterator and optionally sets the
+ * out parameter to the value of the removed element.
  *
- * @param[in] iter the iterator from which the element is being removed
+ * @note This Function should only ever be called after a call to <code>
+ * hashset_iter_next()</code>.
  *
- * @return the removed element
+ * @param[in] iter The iterator on which this operation is performed
+ * @param[out] out Pointer to where the removed element is stored, or NULL
+ *                 if it is to be ignored
+ *
+ * @return CC_OK if the entry was successfully removed, or
+ * CC_ERR_VALUE_NOT_FOUND.
  */
-void *hashset_iter_remove(HashSetIter *iter)
+enum cc_stat hashset_iter_remove(HashSetIter *iter, void **out)
 {
-    void *element = iter->iter.prev_entry->key;
-    hashtable_iter_remove(&(iter->iter));
-    return element;
+    return hashtable_iter_remove(&(iter->iter), out);
 }

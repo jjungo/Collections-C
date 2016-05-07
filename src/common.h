@@ -18,8 +18,8 @@
  * along with Collections-C.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMMON_H_
-#define COMMON_H_
+#ifndef COLLECTIONS_C_COMMON_H
+#define COLLECTIONS_C_COMMON_H
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -32,8 +32,22 @@
 #define MAX_POW_TWO (((size_t) 1) << 31)
 #endif /* ARCH_64 */
 
-#define NO_SUCH_INDEX ((size_t) - 1)
-#define MAX_ELEMENTS  ((size_t) - 2)
+
+enum cc_stat {
+    CC_OK                   = 0,
+
+    CC_ERR_ALLOC            = 1,
+    CC_ERR_INVALID_CAPACITY = 2,
+    CC_ERR_INVALID_RANGE    = 3,
+    CC_ERR_MAX_CAPACITY     = 4,
+    CC_ERR_KEY_NOT_FOUND    = 6,
+    CC_ERR_VALUE_NOT_FOUND  = 7,
+    CC_ERR_OUT_OF_RANGE     = 8,
+
+    CC_ITER_END             = 9,
+};
+
+#define CC_MAX_ELEMENTS ((size_t) - 2)
 
 #if defined(_MSC_VER)
 
@@ -48,4 +62,12 @@
 #endif /* _MSC_VER */
 
 
-#endif /* COMMON_H_ */
+int cc_common_cmp_str(const void *key1, const void *key2);
+int cc_common_cmp_ptr(const void *key1, const void *key2);
+
+
+#define CC_CMP_STRING  cc_common_cmp_str
+#define CC_CMP_POINTER cc_common_cmp_ptr
+
+
+#endif /* COLLECTIONS_C_COMMON_H */

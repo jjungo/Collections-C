@@ -18,30 +18,22 @@
  * along with Collections-C.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARRAY_H_
-#define ARRAY_H_
+#ifndef COLLECTIONS_C_ARRAY_H
+#define COLLECTIONS_C_ARRAY_H
 
 #include "common.h"
 
 /**
- * A dynamic array that expands automatically as elements are added. The array supports
- * amortized constant time insertion and removal of elements at the end of the array, as
- * well as constant time access.
+ * A dynamic array that expands automatically as elements are
+ * added. The array supports amortized constant time insertion
+ * and removal of elements at the end of the array, as well as
+ * constant time access.
  */
 typedef struct array_s Array;
 
 /**
- * Array configuration object. Used to initalize a new Array with specific
- * values.
- *
- * @code
- * ArrayConf c;
- * array_conf_init(&c);
- *
- * c.capcity = 32;
- *
- * Array *a = array_new_conf(&c);
- * @endcode
+ * Array configuration structure. Used to initalize a new Array
+ * with specific values.
  */
 typedef struct array_conf_s {
     /**
@@ -61,18 +53,10 @@ typedef struct array_conf_s {
 } ArrayConf;
 
 /**
- * Array iterator object. Used to iterate over the elements of the array
- * in an ascending order. The iterator also supports operations for safely
- * adding and removing elements during iteration.
- *
- * @code
- * ArrayIter i;
- * array_iter_init(&i);
- *
- * while (array_iter_has_next(&i)) {
- *     MyType *e = array_iter_next(&i);
- * }
- * @endcode
+ * Array iterator structure. Used to iterate over the elements of
+ * the array in an ascending order. The iterator also supports
+ * operations for safely adding and removing elements during
+ * iteration.
  */
 typedef struct array_iter_s {
     /**
@@ -84,50 +68,74 @@ typedef struct array_iter_s {
     size_t  index;
 } ArrayIter;
 
-Array*       array_new             (void);
-Array*       array_new_conf        (ArrayConf *conf);
-void         array_conf_init       (ArrayConf *conf);
+/**
+ * Array zip iterator structure. Used to iterate over the elements of two
+ * arrays in lockstep in an ascending order until one of the Arrays is
+ * exhausted. The iterator also supports operations for safely adding
+ * and removing elements during iteration.
+ */
+typedef struct array_zip_iter_s {
+    Array *ar1;
+    Array *ar2;
+    size_t index;
+} ArrayZipIter;
 
-void         array_destroy         (Array *ar);
-void         array_destroy_free    (Array *ar);
 
-bool         array_add             (Array *ar, void *element);
-bool         array_add_at          (Array *ar, void *element, size_t index);
-void*        array_replace_at      (Array *ar, void *element, size_t index);
+enum cc_stat  array_new             (Array **out);
+enum cc_stat  array_new_conf        (ArrayConf const * const conf, Array **out);
+void          array_conf_init       (ArrayConf *conf);
 
-void*        array_remove          (Array *ar, void *element);
-void*        array_remove_at       (Array *ar, size_t index);
-void*        array_remove_last     (Array *ar);
-void         array_remove_all      (Array *ar);
-void         array_remove_all_free (Array *ar);
+void          array_destroy         (Array *ar);
+void          array_destroy_free    (Array *ar);
 
-void*        array_get             (Array *ar, size_t index);
-void*        array_get_last        (Array *ar);
+enum cc_stat  array_add             (Array *ar, void *element);
+enum cc_stat  array_add_at          (Array *ar, void *element, size_t index);
+enum cc_stat  array_replace_at      (Array *ar, void *element, size_t index, void **out);
 
-Array*       array_subarray        (Array *ar, size_t from, size_t to);
-Array*       array_copy_shallow    (Array *ar);
-Array*       array_copy_deep       (Array *ar, void *(*cp) (void*));
+enum cc_stat  array_remove          (Array *ar, void *element, void **out);
+enum cc_stat  array_remove_at       (Array *ar, size_t index, void **out);
+enum cc_stat  array_remove_last     (Array *ar, void **out);
+void          array_remove_all      (Array *ar);
+void          array_remove_all_free (Array *ar);
 
-void         array_reverse         (Array *ar);
-bool         array_trim_capacity   (Array *ar);
+enum cc_stat  array_get_at          (Array *ar, size_t index, void **out);
+enum cc_stat  array_get_last        (Array *ar, void **out);
 
-size_t       array_contains        (Array *ar, void *element);
-size_t       array_size            (Array *ar);
-size_t       array_capacity        (Array *ar);
+enum cc_stat  array_subarray        (Array *ar, size_t from, size_t to, Array **out);
+enum cc_stat  array_copy_shallow    (Array *ar, Array **out);
+enum cc_stat  array_copy_deep       (Array *ar, void *(*cp) (void*), Array **out);
 
-size_t       array_index_of        (Array *ar, void *element);
-void         array_sort            (Array *ar, int (*cmp) (const void*, const void*));
+void          array_reverse         (Array *ar);
+enum cc_stat  array_trim_capacity   (Array *ar);
 
-void         array_foreach         (Array *ar, void (*op) (void *));
+size_t        array_contains        (Array *ar, void *element);
+size_t        array_contains_value  (Array *ar, void *element, int (*cmp) (const void*, const void*));
+size_t        array_size            (Array *ar);
+size_t        array_capacity        (Array *ar);
 
-void         array_iter_init       (ArrayIter *iter, Array *vec);
-bool         array_iter_has_next   (ArrayIter *iter);
-void*        array_iter_next       (ArrayIter *iter);
-void*        array_iter_remove     (ArrayIter *iter);
-bool         array_iter_add        (ArrayIter *iter, void *element);
-void*        array_iter_replace    (ArrayIter *iter, void *element);
-size_t       array_iter_index      (ArrayIter *iter);
+enum cc_stat  array_index_of        (Array *ar, void *element, size_t *index);
+void          array_sort            (Array *ar, int (*cmp) (const void*, const void*));
+
+void          array_map             (Array *ar, void (*fn) (void *));
+
+enum cc_stat  array_filter_mut      (Array *ar, bool (*predicate) (const void*));
+enum cc_stat  array_filter          (Array *ar, bool (*predicate) (const void*), Array **out);
+
+void          array_iter_init       (ArrayIter *iter, Array *ar);
+enum cc_stat  array_iter_next       (ArrayIter *iter, void **out);
+enum cc_stat  array_iter_remove     (ArrayIter *iter, void **out);
+enum cc_stat  array_iter_add        (ArrayIter *iter, void *element);
+enum cc_stat  array_iter_replace    (ArrayIter *iter, void *element, void **out);
+size_t        array_iter_index      (ArrayIter *iter);
+
+
+void          array_zip_iter_init   (ArrayZipIter *iter, Array *a1, Array *a2);
+enum cc_stat  array_zip_iter_next   (ArrayZipIter *iter, void **out1, void **out2);
+enum cc_stat  array_zip_iter_add    (ArrayZipIter *iter, void *e1, void *e2);
+enum cc_stat  array_zip_iter_remove (ArrayZipIter *iter, void **out1, void **out2);
+enum cc_stat  array_zip_iter_replace(ArrayZipIter *iter, void *e1, void *e2, void **out1, void **out2);
+size_t        array_zip_iter_index  (ArrayZipIter *iter);
 
 const void* const* array_get_buffer(Array *ar);
 
-#endif /* ARRAY_H_ */
+#endif /* COLLECTIONS_C_ARRAY_H */
